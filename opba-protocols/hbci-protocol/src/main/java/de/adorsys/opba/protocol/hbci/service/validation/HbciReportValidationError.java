@@ -1,5 +1,6 @@
 package de.adorsys.opba.protocol.hbci.service.validation;
 
+import com.google.common.collect.ImmutableMap;
 import de.adorsys.opba.protocol.bpmnshared.dto.context.LastRedirectionTarget;
 import de.adorsys.opba.protocol.bpmnshared.dto.messages.ValidationProblem;
 import de.adorsys.opba.protocol.bpmnshared.service.context.ContextUtil;
@@ -11,8 +12,10 @@ import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Collections;
 
 import static de.adorsys.opba.protocol.hbci.constant.GlobalConst.LAST_REDIRECTION_TARGET;
 import static de.adorsys.opba.protocol.hbci.constant.GlobalConst.LAST_VALIDATION_ISSUES;
@@ -43,11 +46,10 @@ public class HbciReportValidationError implements JavaDelegate {
                         .executionId(execution.getId())
                         .consentIncompatible(violations.isConsentIncompatible())
                         .provideMoreParamsDialog(
-                                ContextUtil.evaluateSpelForCtx(
-                                        configuration.getRedirect().getParameters().getProvideMore(),
-                                        execution,
-                                        current,
-                                        URI.class)
+                                UriComponentsBuilder.fromHttpUrl(configuration.getRedirect().getParameters().getProvideMore())
+                                        .queryParam("redirectCode", current.getRedirectCodeIfAuthContinued())
+                                        .buildAndExpand(ImmutableMap.of("sessionId", current.getAuthorizationSessionIdIfOpened()))
+                                        .toUri()
                         )
                         .issues(current.getViolations())
                         .build()
